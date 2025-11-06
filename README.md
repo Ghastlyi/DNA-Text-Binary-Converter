@@ -1,59 +1,66 @@
-# DNA-Text-Binary-Converter
-An easy to use Flask web app for translating tools to and from DNA, binary and text.  This project serves as an illustration of DNA data encoding, covering for informational encoding by using nucleotide bases (A,T,G,C).  
+# DNA Text-Binary Converter (Flask Web App)
 
-# 🧬 DNA Text-Binary Converter (Flask Web App)
+## Project Overview
 
-## Overview
-This project is a Flask-based web application that lets users convert data between **Text**, **Binary**, and **DNA sequence** formats.  
-It’s inspired by the concept of **DNA data storage**, an emerging technology that uses genetic molecules to store digital data.  
-The app provides an easy-to-use interface for encoding and decoding, allowing students and researchers to explore how biological systems can inspire data storage models.
+This project is a Flask-based web application that allows users to convert data between text, binary, and DNA base sequences (A, T, G, C). It serves as an illustration of how binary data can be encoded using DNA nucleotides — a concept inspired by bioinformatics and DNA data storage systems. The application provides a simple and intuitive web interface to perform conversions instantly.
 
 ---
 
-##  How It Works
-1. **Text → Binary → DNA:**  
-   Each character is converted to binary, and then each binary pair is mapped to a DNA base (A, T, G, C).  
-2. **DNA → Binary → Text:**  
-   The sequence is decoded back to binary and then converted to readable text.  
-3. **Binary ↔ DNA ↔ Text:**  
-   The app allows free conversion between these three layers to demonstrate reversibility and accuracy.
+## How It Works
 
----
+Each DNA base represents two binary bits.  
+The conversion logic is based on mapping binary pairs to DNA bases as follows:  
+00 → A  
+01 → T  
+10 → G  
+11 → C  
 
-## Technologies Used
-- **Python 3.10+**
-- **Flask (Web Framework)**
-- **HTML, CSS (Frontend UI)**
-- **Jinja2 Templating**
-- **Bootstrap (for layout)**
+For example:  
+Text “A” → Binary “01000001” → DNA “TAAT”  
+DNA “TAAT” → Binary “01000001” → Text “A”
+
+This simple model demonstrates how computers can mimic biological information encoding systems.
 
 ---
 
 ## Features
-- Convert **Text ↔ Binary ↔ DNA**
-- Real-time results with a clean web interface
-- Lightweight Flask backend, easy to run locally
-- Educational demonstration of DNA-based information encoding
-- Extendable for encryption or compression research
+
+- Converts Text ↔ Binary ↔ DNA  
+- Works through a Flask web interface  
+- Accurate and consistent encoding/decoding logic  
+- Lightweight and easy to deploy  
+- Ideal for learning bioinformatics or data encoding concepts  
 
 ---
 
-# clone the repo
-git clone https://github.com/yourusername/DNA-Text-Binary-Converter.git
+## Installation and Setup
+
+1.Clone the repository
+```bash
+git clone https://github.com/Ghastlyi/DNA-Text-Binary-Converter.git
 cd DNA-Text-Binary-Converter
+```
 
-# create and activate virtual environment (recommended)
+2.Create and activate a virtual environment
+
+For Windows (PowerShell):
+```bash
 python -m venv venv
-# Windows
 venv\Scripts\activate
-# macOS / Linux
+```
+
+For macOS/Linux:
+```bash
+python3 -m venv venv
 source venv/bin/activate
+```
 
-# install dependencies
+3.Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
-# run the app
-python dna_converter.py
-
-# open in browser
-http://127.0.0.1:5000
+4.Run the program
+```bash
+python main.py
+```
