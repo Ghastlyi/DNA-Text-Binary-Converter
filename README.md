@@ -67,6 +67,8 @@ python main.py
 
 ## Notes on Limitations
 
--This project is a digital simulation only — it does not perform real DNA synthesis or molecular storage.
+-This project is a digital simulation only it does not perform real DNA synthesis or molecular storage.
+
 -The mapping is simplistic (2-bit → 1 base) and lacks redundancy and advanced error correction that real DNA storage solutions require.
+
 -Not optimized for very large files or binary streams without modifications.
