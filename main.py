@@ -9,16 +9,28 @@ def text_to_binary(text):
     return ''.join(format(ord(char), '08b') for char in text)
 
 def binary_to_text(binary):
+    # Ensure binary length is multiple of 8 by removing extra bits
+    binary = binary[:len(binary) - (len(binary) % 8)]
     chars = [binary[i:i+8] for i in range(0, len(binary), 8)]
-    return ''.join(chr(int(b, 2)) for b in chars if b)
+    return ''.join(chr(int(b, 2)) for b in chars if len(b) == 8)
 
 def binary_to_dna_seq(binary):
+    # Remove any spaces and ensure even length
+    binary = binary.replace(' ', '')
     if len(binary) % 2 != 0:
-        binary += '0'
+        binary = binary[:-1]  # Remove last bit to make even
     return ''.join(binary_to_dna.get(binary[i:i+2], '?') for i in range(0, len(binary), 2))
 
 def dna_to_binary_seq(dna):
-    return ''.join(dna_to_binary.get(base, '??') for base in dna)
+    # Remove any spaces and convert to uppercase
+    dna = dna.upper().replace(' ', '')
+    binary = ''
+    for base in dna:
+        if base in dna_to_binary:
+            binary += dna_to_binary[base]
+        else:
+            binary += '??'
+    return binary
 
 def text_to_dna(text):
     binary = text_to_binary(text)
@@ -32,200 +44,483 @@ HTML = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>DNA ↔ Text/Binary Converter</title>
+    <title>Converter | DNA Genetic Encoding</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        :root {
+            --primary: #00f0ff;
+            --secondary: #7b42f6;
+            --accent: #00ff88;
+            --dark: #0a0e17;
+            --darker: #050811;
+            --card-bg: rgba(10, 14, 23, 0.8);
+            --glow: 0 0 20px;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         html, body {
             min-height: 100vh;
-            margin: 0;
-        }
-        body {
-            font-family: 'Share Tech Mono', 'Roboto Mono', monospace;
-            background: radial-gradient(ellipse at top, #051629 70%, #0fffd7 170%);
-            position: relative;
+            font-family: 'Rajdhani', 'Share Tech Mono', monospace;
+            background: var(--darker);
+            color: #e0f7fa;
             overflow-x: hidden;
+            position: relative;
         }
-        .dna-background {
-            width: 90vw;
-            max-width: 1100px;
-            height: 400px;
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(45deg, var(--darker) 0%, var(--dark) 100%),
+                repeating-linear-gradient(0deg, 
+                    transparent 0px, 
+                    transparent 1px, 
+                    rgba(0, 240, 255, 0.03) 2px, 
+                    transparent 3px
+                );
+            z-index: 1;
+        }
+
+        .dna-helix-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+            opacity: 0.1;
+        }
+
+        .helix {
             position: absolute;
-            left: 50%;
-            top: 40px;
-            z-index: 0;
-            transform: translateX(-50%);
-            opacity: 0.78;
+            width: 2px;
+            height: 200px;
+            background: linear-gradient(to bottom, transparent, var(--primary), transparent);
+            animation: float 15s infinite linear;
         }
+
+        .helix::before, .helix::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            left: -3px;
+        }
+
+        .helix::before { top: 0; animation: pulse 2s infinite; }
+        .helix::after { bottom: 0; animation: pulse 2s infinite 1s; }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); }
+            100% { transform: translateY(-100vh) rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+        }
+
         .container {
             position: relative;
-            z-index: 2;
-            background: rgba(19,40,60,0.97);
-            max-width: 600px;
-            margin: 70px auto 40px auto;
-            padding: 44px 38px 46px 38px;
-            border-radius: 20px;
-            box-shadow: 0 0 64px #19ffe0aa, 0 0 14px #0fffd7bb inset;
-            border: 2.5px solid #0fffd7;
+            z-index: 3;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
         }
-        h1 {
+
+        .header {
             text-align: center;
-            color: #19ffe0;
-            font-size: 2.30em;
-            margin-bottom: 18px;
-            font-weight: 700;
-            text-shadow: 0 0 18px #13ffe066;
+            margin-bottom: 60px;
+            padding: 60px 40px;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            box-shadow: 
+                var(--glow) rgba(0, 240, 255, 0.3),
+                inset 0 0 100px rgba(0, 240, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
-        .subtitle {
-            color: #13ffe0;
-            text-align: center;
-            font-size: 1.13em;
-            margin-bottom: 30px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 8px #0fffd76f;
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: conic-gradient(
+                transparent, 
+                rgba(0, 240, 255, 0.1), 
+                transparent 30%
+            );
+            animation: rotate 10s linear infinite;
         }
-        form {
-            margin-top: 10px;
+
+        @keyframes rotate {
+            100% { transform: rotate(360deg); }
         }
-        label {
-            color: #13ffe0;
-            font-size: 1.10em;
-        }
-        select, input[type=text] {
-            background: #172d46;
-            color: #19ffe0;
-            border: 2px solid #13ffe0;
-            box-shadow: 0 0 12px #19ffe057;
-            font-size: 1.12em;
-            padding: 13px;
-            border-radius: 8px;
+
+        .logo {
+            font-size: 4em;
             margin-bottom: 20px;
-            outline: none;
-            width: 100%;
-            transition: box-shadow .23s;
+            filter: drop-shadow(0 0 20px var(--primary));
         }
-        select:focus, input[type=text]:focus {
-            box-shadow: 0 0 23px #13ffe0c8, 0 0 16px #19ffe0cc inset;
-        }
-        input[type=submit] {
-            background: linear-gradient(90deg, #19ffe0 0%, #13ffe0 100%);
-            color: #171f27;
-            border: none;
-            padding: 13px 0;
-            border-radius: 10px;
-            width: 100%;
-            font-size: 1.19em;
-            letter-spacing: 2px;
+
+        h1 {
+            font-size: 3.5em;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
             font-weight: 700;
-            cursor: pointer;
-            box-shadow: 0 0 21px #13ffe093, 0 1px 15px #18ffe073;
-            transition: background .22s, color .19s;
-            margin-bottom: 12px;
+            letter-spacing: 3px;
         }
-        input[type=submit]:hover {
-            background: linear-gradient(90deg, #13ffe0 15%, #19ffe0 85%);
-            color: #051629;
-            box-shadow: 0 0 36px #13ffe060;
+
+        .subtitle {
+            font-size: 1.4em;
+            color: #88e0f7;
+            margin-bottom: 30px;
+            line-height: 1.6;
         }
-        .result {
-            background: linear-gradient(100deg, #051629 10%, #19ffe0 100%);
-            border-left: 9px solid #19ffe0;
-            padding: 22px 16px 18px 24px;
-            margin-top: 36px;
-            font-size: 1.18em;
-            color: #13283c;
-            font-weight: 600;
-            word-break:break-all;
-            box-shadow: 0 0 29px #13ffe099 inset;
-            border-radius: 13px;
+
+        .converter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 968px) {
+            .converter-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .converter-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(123, 66, 246, 0.3);
+            box-shadow: 
+                var(--glow) rgba(123, 66, 246, 0.2),
+                inset 0 0 80px rgba(123, 66, 246, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .converter-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(123, 66, 246, 0.1),
+                transparent
+            );
+            transition: left 0.6s;
+        }
+
+        .converter-card:hover::before {
+            left: 100%;
+        }
+
+        .card-title {
+            font-size: 1.6em;
+            color: var(--secondary);
+            margin-bottom: 25px;
             display: flex;
             align-items: center;
-            gap: 25px;
+            gap: 10px;
         }
-        footer {
-            margin-top: 30px;
-            text-align: center;
-            color: #13ffe0cc;
-            font-size: 1.09em;
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: var(--primary);
+            font-size: 1.1em;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        select, input[type="text"], textarea {
+            width: 100%;
+            padding: 18px 20px;
+            background: rgba(15, 20, 35, 0.8);
+            border: 2px solid var(--primary);
+            border-radius: 12px;
+            color: #e0f7fa;
+            font-size: 1.1em;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            resize: vertical;
+        }
+
+        select:focus, input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+        }
+
+        .btn-convert {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 12px;
+            color: var(--darker);
+            font-size: 1.3em;
+            font-weight: 700;
             letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
         }
-        @media (max-width: 900px) {
-            .container { max-width:92vw; padding: 2vw 3vw;}
-            .dna-background { width:100vw; left:0; transform:none;}
+
+        .btn-convert::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-convert:hover::before {
+            left: 100%;
+        }
+
+        .btn-convert:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 240, 255, 0.4);
+        }
+
+        .result-container {
+            margin-top: 30px;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .result-label {
+            color: var(--accent);
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-box {
+            background: rgba(15, 20, 35, 0.9);
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 25px;
+            color: #e0f7fa;
+            font-size: 1.1em;
+            word-break: break-all;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: inset 0 0 30px rgba(0, 255, 136, 0.1);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            padding: 40px;
+            color: #88e0f7;
+            font-size: 1em;
+            border-top: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        .typewriter {
+            border-right: 2px solid var(--primary);
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { border-color: transparent; }
+            50% { border-color: var(--primary); }
         }
     </style>
-    <link href="https://fonts.googleapis.com/css?family=Share+Tech+Mono:400" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <!-- Big DNA background - bright and clear -->
-    <div class="dna-background">
-      <svg viewBox="0 0 1100 400" width="100%" height="100%">
-        <defs>
-          <linearGradient id="helixGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#19ffe0"/>
-            <stop offset="100%" stop-color="#2a99fc"/>
-          </linearGradient>
-          <radialGradient id="nucGrad1" cx="50%" cy="50%" r="50%">
-            <stop offset="10%" stop-color="#fff"/>
-            <stop offset="100%" stop-color="#19ffe0"/>
-          </radialGradient>
-          <radialGradient id="nucGrad2" cx="50%" cy="50%" r="50%">
-            <stop offset="10%" stop-color="#fff"/>
-            <stop offset="100%" stop-color="#2a99fc"/>
-          </radialGradient>
-        </defs>
-        <g>
-          <!-- Main double helix curves -->
-          <path d="M120,340 Q360,80 550,340 T1000,340" fill="none" stroke="url(#helixGrad)" stroke-width="28" opacity="0.91"/>
-          <path d="M120,60 Q360,320 550,60 T1000,60" fill="none" stroke="url(#helixGrad)" stroke-width="27" opacity="0.89"/>
-          <!-- Nucleotides Left-to-Right -->
-          <circle cx="210" cy="120" r="32" fill="url(#nucGrad1)"/>
-          <circle cx="210" cy="280" r="32" fill="url(#nucGrad2)"/>
-          <circle cx="370" cy="260" r="32" fill="url(#nucGrad1)"/>
-          <circle cx="370" cy="110" r="32" fill="url(#nucGrad2)"/>
-          <circle cx="570" cy="115" r="32" fill="url(#nucGrad1)"/>
-          <circle cx="570" cy="270" r="32" fill="url(#nucGrad2)"/>
-          <circle cx="780" cy="282" r="32" fill="url(#nucGrad1)"/>
-          <circle cx="780" cy="100" r="32" fill="url(#nucGrad2)"/>
-          <circle cx="950" cy="120" r="32" fill="url(#nucGrad1)"/>
-          <circle cx="950" cy="265" r="32" fill="url(#nucGrad2)"/>
-          <!-- Connector lines -->
-          <line x1="210" y1="120" x2="210" y2="280" stroke="#fff" stroke-width="5"/>
-          <line x1="370" y1="110" x2="370" y2="260" stroke="#fff" stroke-width="5"/>
-          <line x1="570" y1="115" x2="570" y2="270" stroke="#fff" stroke-width="5"/>
-          <line x1="780" y1="100" x2="780" y2="282" stroke="#fff" stroke-width="5"/>
-          <line x1="950" y1="120" x2="950" y2="265" stroke="#fff" stroke-width="5"/>
-        </g>
-      </svg>
-    </div>
+    <!-- Advanced Background -->
+    <div class="matrix-bg"></div>
+    
+    <div class="dna-helix-container" id="helixContainer"></div>
+
     <div class="container">
-        <h1>DNA &#x21C4; Text/Binary Converter</h1>
-        <div class="subtitle">
-            Encode messages using DNA nitrogen bases.<br>
-            Convert freely between text, binary, and DNA code!
-        </div>
-        <form method="post" autocomplete="off">
-            <label for="conversion">Conversion Type:</label>
-            <select id="conversion" name="conversion" required>
-                <option value="text_to_dna">Text → DNA (A,T,G,C)</option>
-                <option value="dna_to_text">DNA → Text</option>
-                <option value="binary_to_dna">Binary → DNA</option>
-                <option value="dna_to_binary">DNA → Binary</option>
-                <option value="text_to_binary">Text → Binary</option>
-                <option value="binary_to_text">Binary → Text</option>
-            </select>
-            <label for="data">Your Input:</label>
-            <input type="text" id="data" name="data" required>
-            <input type="submit" value="Convert">
-        </form>
-        {% if result %}
-            <div class="result">
-                <span><strong>Result:</strong> {{ result }}</span>
+        <div class="header">
+            <div class="logo">🧬</div>
+            <h1>Converter</h1>
+            <div class="subtitle">
+                Advanced DNA Genetic Encoding System<br>
+                Convert between Text, Binary, and DNA sequences with precision
             </div>
-        {% endif %}
+        </div>
+
+        <div class="converter-grid">
+            <div class="converter-card">
+                <div class="card-title">🔮 Encoder</div>
+                <form method="post" autocomplete="off">
+                    <div class="form-group">
+                        <label for="conversion">Conversion Mode</label>
+                        <select id="conversion" name="conversion" required>
+                            <option value="text_to_dna">📝 Text → 🧬 DNA Sequence</option>
+                            <option value="text_to_binary">📝 Text → 🔢 Binary</option>
+                            <option value="binary_to_dna">🔢 Binary → 🧬 DNA Sequence</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="data">Input Data</label>
+                        <textarea 
+                            id="data" 
+                            name="data" 
+                            required 
+                            rows="4"
+                            placeholder="Enter your text or binary code to encode..."
+                        >{% if request.method == 'POST' and request.form.get('conversion') in ['text_to_dna', 'text_to_binary', 'binary_to_dna'] %}{{ request.form.get('data', '') }}{% endif %}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn-convert">
+                        🚀 Encode Data
+                    </button>
+                </form>
+
+                {% if result and request.method == 'POST' and request.form.get('conversion') in ['text_to_dna', 'text_to_binary', 'binary_to_dna'] %}
+                <div class="result-container">
+                    <div class="result-label">📊 Encoded Output</div>
+                    <div class="result-box">{{ result }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="converter-card">
+                <div class="card-title">🔍 Decoder</div>
+                <form method="post" autocomplete="off">
+                    <div class="form-group">
+                        <label for="conversion2">Conversion Mode</label>
+                        <select id="conversion2" name="conversion" required>
+                            <option value="dna_to_text">🧬 DNA Sequence → 📝 Text</option>
+                            <option value="dna_to_binary">🧬 DNA Sequence → 🔢 Binary</option>
+                            <option value="binary_to_text">🔢 Binary → 📝 Text</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="data2">Input Data</label>
+                        <textarea 
+                            id="data2" 
+                            name="data" 
+                            required 
+                            rows="4"
+                            placeholder="Enter DNA sequence or binary code to decode..."
+                        >{% if request.method == 'POST' and request.form.get('conversion') in ['dna_to_text', 'dna_to_binary', 'binary_to_text'] %}{{ request.form.get('data', '') }}{% endif %}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn-convert">
+                        🔓 Decode Data
+                    </button>
+                </form>
+
+                {% if result and request.method == 'POST' and request.form.get('conversion') in ['dna_to_text', 'dna_to_binary', 'binary_to_text'] %}
+                <div class="result-container">
+                    <div class="result-label">📊 Decoded Output</div>
+                    <div class="result-box">{{ result }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <footer>
+            Converter &copy; 2025 | DNA Genetic Encoding Technology
+        </footer>
     </div>
-    <footer>
-        DNA Nitrogen Base Converter &copy; 2025 · Full-Page DNA Neon Theme
-    </footer>
+
+    <script>
+        // Create floating DNA helixes
+        function createHelixes() {
+            const container = document.getElementById('helixContainer');
+            for (let i = 0; i < 15; i++) {
+                const helix = document.createElement('div');
+                helix.className = 'helix';
+                helix.style.left = Math.random() * 100 + 'vw';
+                helix.style.animationDelay = Math.random() * 15 + 's';
+                container.appendChild(helix);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            createHelixes();
+
+            // Add interactive effects
+            const inputs = document.querySelectorAll('input, select, textarea');
+            inputs.forEach(input => {
+                input.addEventListener('focus', function() {
+                    this.parentElement.style.transform = 'scale(1.02)';
+                });
+                
+                input.addEventListener('blur', function() {
+                    this.parentElement.style.transform = 'scale(1)';
+                });
+            });
+
+            // Update placeholders based on selection
+            const conversionSelects = document.querySelectorAll('select[name="conversion"]');
+            conversionSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const textarea = this.closest('form').querySelector('textarea');
+                    const options = {
+                        'text_to_dna': 'Enter text to convert to DNA sequence...',
+                        'text_to_binary': 'Enter text to convert to binary...',
+                        'binary_to_dna': 'Enter binary code (e.g., 01001000) to convert to DNA...',
+                        'dna_to_text': 'Enter DNA sequence (e.g., ATGC) to decode to text...',
+                        'dna_to_binary': 'Enter DNA sequence to convert to binary...',
+                        'binary_to_text': 'Enter binary code to decode to text...'
+                    };
+                    textarea.placeholder = options[this.value] || 'Enter data...';
+                });
+            });
+        });
+    </script>
 </body>
 </html>
 """
@@ -234,7 +529,7 @@ HTML = """
 def index():
     result = None
     if request.method == 'POST':
-        data = request.form['data']
+        data = request.form['data'].strip()
         conversion = request.form['conversion']
         try:
             if conversion == 'text_to_dna':
