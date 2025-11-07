@@ -35,6 +35,8 @@ This simple model demonstrates how computers can mimic biological information en
 
 ## Installation and Setup
 Open terminal and follow...
+
+
 1.Clone the repository
 ```bash
 git clone https://github.com/Ghastlyi/DNA-Text-Binary-Converter.git
