@@ -40,7 +40,7 @@ def dna_to_text(dna):
     binary = dna_to_binary_seq(dna)
     return binary_to_text(binary)
 
-HTML = """
+HTML_TEMPLATE = '''
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,7 +53,7 @@ HTML = """
             --accent: #00ff88;
             --dark: #0a0e17;
             --darker: #050811;
-            --card-bg: rgba(10, 14, 23, 0.8);
+            --card-bg: rgba(10, 14, 23, 0.9);
             --glow: 0 0 20px;
         }
         
@@ -65,7 +65,7 @@ HTML = """
         
         html, body {
             min-height: 100vh;
-            font-family: 'Rajdhani', 'Share Tech Mono', monospace;
+            font-family: 'Rajdhani', monospace;
             background: var(--darker);
             color: #e0f7fa;
             overflow-x: hidden;
@@ -97,7 +97,7 @@ HTML = """
             height: 100%;
             pointer-events: none;
             z-index: 2;
-            opacity: 0.1;
+            opacity: 0.15;
         }
 
         .helix {
@@ -192,8 +192,15 @@ HTML = """
         .subtitle {
             font-size: 1.4em;
             color: #88e0f7;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             line-height: 1.6;
+        }
+
+        .mba-tech {
+            font-size: 1.1em;
+            color: rgba(136, 224, 247, 0.7);
+            margin-bottom: 30px;
+            font-style: italic;
         }
 
         .converter-grid {
@@ -220,6 +227,15 @@ HTML = """
                 inset 0 0 80px rgba(123, 66, 246, 0.1);
             position: relative;
             overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .converter-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 
+                0 15px 30px rgba(123, 66, 246, 0.3),
+                var(--glow) rgba(123, 66, 246, 0.2),
+                inset 0 0 80px rgba(123, 66, 246, 0.1);
         }
 
         .converter-card::before {
@@ -322,6 +338,7 @@ HTML = """
         .result-container {
             margin-top: 30px;
             animation: slideUp 0.5s ease-out;
+            position: relative;
         }
 
         @keyframes slideUp {
@@ -358,23 +375,41 @@ HTML = """
             box-shadow: inset 0 0 30px rgba(0, 255, 136, 0.1);
         }
 
-        footer {
+        .footer {
             text-align: center;
             margin-top: 60px;
-            padding: 40px;
+            padding: 30px;
             color: #88e0f7;
             font-size: 1em;
             border-top: 1px solid rgba(0, 240, 255, 0.2);
         }
 
-        .typewriter {
-            border-right: 2px solid var(--primary);
-            animation: blink 1s infinite;
+        .made-by {
+            color: rgba(136, 224, 247, 0.3);
+            font-size: 0.8em;
+            margin-top: 10px;
+            font-style: italic;
         }
 
-        @keyframes blink {
-            0%, 100% { border-color: transparent; }
-            50% { border-color: var(--primary); }
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 240, 255, 0.2);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            border-radius: 6px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            z-index: 10;
+        }
+
+        .copy-btn:hover {
+            background: rgba(0, 240, 255, 0.3);
+            transform: scale(1.05);
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -388,17 +423,20 @@ HTML = """
     <div class="container">
         <div class="header">
             <div class="logo">🧬</div>
-            <h1>Converter</h1>
+            <h1>DNA Genetic Encoder</h1>
             <div class="subtitle">
                 Advanced DNA Genetic Encoding System<br>
                 Convert between Text, Binary, and DNA sequences with precision
             </div>
+            <div class="mba-tech">MBA TECH A DIV</div>
         </div>
 
         <div class="converter-grid">
+            <!-- Encoder Card -->
             <div class="converter-card">
                 <div class="card-title">🔮 Encoder</div>
                 <form method="post" autocomplete="off">
+                    <input type="hidden" name="form_type" value="encoder">
                     <div class="form-group">
                         <label for="conversion">Conversion Mode</label>
                         <select id="conversion" name="conversion" required>
@@ -416,7 +454,7 @@ HTML = """
                             required 
                             rows="4"
                             placeholder="Enter your text or binary code to encode..."
-                        >{% if request.method == 'POST' and request.form.get('conversion') in ['text_to_dna', 'text_to_binary', 'binary_to_dna'] %}{{ request.form.get('data', '') }}{% endif %}</textarea>
+                        >{{ encoder_data if encoder_data else '' }}</textarea>
                     </div>
 
                     <button type="submit" class="btn-convert">
@@ -424,17 +462,20 @@ HTML = """
                     </button>
                 </form>
 
-                {% if result and request.method == 'POST' and request.form.get('conversion') in ['text_to_dna', 'text_to_binary', 'binary_to_dna'] %}
+                {% if encoder_result %}
                 <div class="result-container">
                     <div class="result-label">📊 Encoded Output</div>
-                    <div class="result-box">{{ result }}</div>
+                    <button class="copy-btn" onclick="copyToClipboard('{{ encoder_result }}')">Copy</button>
+                    <div class="result-box">{{ encoder_result }}</div>
                 </div>
                 {% endif %}
             </div>
 
+            <!-- Decoder Card -->
             <div class="converter-card">
                 <div class="card-title">🔍 Decoder</div>
                 <form method="post" autocomplete="off">
+                    <input type="hidden" name="form_type" value="decoder">
                     <div class="form-group">
                         <label for="conversion2">Conversion Mode</label>
                         <select id="conversion2" name="conversion" required>
@@ -452,7 +493,7 @@ HTML = """
                             required 
                             rows="4"
                             placeholder="Enter DNA sequence or binary code to decode..."
-                        >{% if request.method == 'POST' and request.form.get('conversion') in ['dna_to_text', 'dna_to_binary', 'binary_to_text'] %}{{ request.form.get('data', '') }}{% endif %}</textarea>
+                        >{{ decoder_data if decoder_data else '' }}</textarea>
                     </div>
 
                     <button type="submit" class="btn-convert">
@@ -460,18 +501,20 @@ HTML = """
                     </button>
                 </form>
 
-                {% if result and request.method == 'POST' and request.form.get('conversion') in ['dna_to_text', 'dna_to_binary', 'binary_to_text'] %}
+                {% if decoder_result %}
                 <div class="result-container">
                     <div class="result-label">📊 Decoded Output</div>
-                    <div class="result-box">{{ result }}</div>
+                    <button class="copy-btn" onclick="copyToClipboard('{{ decoder_result }}')">Copy</button>
+                    <div class="result-box">{{ decoder_result }}</div>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <footer>
+        <div class="footer">
             Converter &copy; 2025 | DNA Genetic Encoding Technology
-        </footer>
+            <div class="made-by">Made By Parth Pawar</div>
+        </div>
     </div>
 
     <script>
@@ -485,6 +528,27 @@ HTML = """
                 helix.style.animationDelay = Math.random() * 15 + 's';
                 container.appendChild(helix);
             }
+        }
+
+        // Copy to clipboard function
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                // Show a subtle notification instead of alert
+                const copyBtn = event.target;
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                copyBtn.style.background = 'rgba(0, 255, 136, 0.3)';
+                copyBtn.style.borderColor = 'var(--accent)';
+                
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.background = 'rgba(0, 240, 255, 0.2)';
+                    copyBtn.style.borderColor = 'var(--primary)';
+                }, 2000);
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+                alert('Failed to copy to clipboard');
+            });
         }
 
         // Initialize
@@ -523,14 +587,20 @@ HTML = """
     </script>
 </body>
 </html>
-"""
+'''
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    result = None
+    encoder_result = None
+    decoder_result = None
+    encoder_data = ''
+    decoder_data = ''
+    
     if request.method == 'POST':
         data = request.form['data'].strip()
         conversion = request.form['conversion']
+        form_type = request.form.get('form_type', '')
+        
         try:
             if conversion == 'text_to_dna':
                 result = text_to_dna(data)
@@ -544,9 +614,33 @@ def index():
                 result = text_to_binary(data)
             elif conversion == 'binary_to_text':
                 result = binary_to_text(data)
+            else:
+                result = "Invalid conversion type"
+                
+            # Store results based on form type
+            if form_type == 'encoder':
+                encoder_result = result
+                encoder_data = data
+            elif form_type == 'decoder':
+                decoder_result = result
+                decoder_data = data
+                
         except Exception as e:
-            result = f"Error: {str(e)}"
-    return render_template_string(HTML, result=result)
+            error_msg = f"Error: {str(e)}"
+            if form_type == 'encoder':
+                encoder_result = error_msg
+                encoder_data = data
+            elif form_type == 'decoder':
+                decoder_result = error_msg
+                decoder_data = data
+    
+    return render_template_string(
+        HTML_TEMPLATE, 
+        encoder_result=encoder_result,
+        decoder_result=decoder_result,
+        encoder_data=encoder_data,
+        decoder_data=decoder_data
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
